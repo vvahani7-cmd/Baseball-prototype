@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PitcherController : MonoBehaviour
 {
@@ -14,6 +15,8 @@ public class PitcherController : MonoBehaviour
     [SerializeField] private int resolution = 60;
 
     Vector3 p1, p2;
+
+    public float ballRadius;
 
     public void ThrowPitch()
     {
@@ -57,12 +60,59 @@ public class PitcherController : MonoBehaviour
         ball.SetPath(curve, arc, speed);
     }
 
+    private bool isDragging;
+    private bool dragDetected;
+    private Vector2 pressPosition;
+    [SerializeField] private float dragThreshold = 8f;
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Mouse.current == null) return;
+
+        // Mouse down
+        if (Mouse.current.leftButton.wasPressedThisFrame)
         {
-            ThrowPitch();
+            pressPosition = Mouse.current.position.ReadValue();
+            dragDetected = false;
+            isDragging = true;
+
+            IncomingPitchReflection.Instance.isBatterAllowedToSetPos = true;
         }
+
+        // Mouse held
+        if (Mouse.current.leftButton.isPressed && isDragging)
+        {
+            Vector2 currentPos = Mouse.current.position.ReadValue();
+
+            if (!dragDetected &&
+                Vector2.Distance(currentPos, pressPosition) > dragThreshold)
+            {
+                dragDetected = true;
+            }
+
+            if (dragDetected)
+            {
+                OnDrag();
+            }
+        }
+
+        // Mouse up
+        if (Mouse.current.leftButton.wasReleasedThisFrame)
+        {
+            IncomingPitchReflection.Instance.isBatterAllowedToSetPos = false;
+            isDragging = false;
+
+            // CLICK = throw
+            if (!dragDetected)
+            {
+                ThrowPitch();
+            }
+        }
+
+    }
+
+    void OnDrag()
+    {
+        endTransform.position = IncomingPitchReflection.Instance.GetPositionByBatter();
     }
 
 
@@ -97,15 +147,15 @@ public class PitcherController : MonoBehaviour
 
         // Draw start & end
         Gizmos.color = Color.green;
-        Gizmos.DrawSphere(start, 0.05f);
+        Gizmos.DrawSphere(start, ballRadius);
 
         Gizmos.color = Color.red;
-        Gizmos.DrawSphere(end, 0.05f);
+        Gizmos.DrawSphere(end, ballRadius);
 
         // Draw control points
         Gizmos.color = Color.yellow;
-        Gizmos.DrawSphere(control1, 0.04f);
-        Gizmos.DrawSphere(control2, 0.04f);
+        Gizmos.DrawSphere(control1, ballRadius);
+        Gizmos.DrawSphere(control2, ballRadius);
 
         // Draw helper lines
         Gizmos.color = Color.gray;

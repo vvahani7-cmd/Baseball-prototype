@@ -11,6 +11,21 @@ public class BallController : MonoBehaviour
 
     bool isMoving;
 
+    Rigidbody rb;
+    Vector3 lastPosition;
+    Vector3 currentVelocity;
+
+    private void Awake()
+    {
+        rb = GetComponent<Rigidbody>();
+
+        rb.isKinematic = true;
+        rb.useGravity = false;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+    }
+
+
     public void SetPath(Vector3[] curve, float[] arc, float ballSpeed)
     {
         curvePoints = curve;
@@ -21,7 +36,13 @@ public class BallController : MonoBehaviour
         totalLength = arcLengths[arcLengths.Length - 1];
 
         isMoving = true;
+
+        rb.linearVelocity = Vector3.zero;
+        rb.isKinematic = true;
+
+
         transform.position = curvePoints[0];
+        lastPosition = transform.position;
     }
 
 
@@ -34,12 +55,26 @@ public class BallController : MonoBehaviour
         if (travelledDistance >= totalLength)
         {
             transform.position = curvePoints[curvePoints.Length - 1];
-            isMoving = false;
+            EnablePhysics();
             return;
         }
 
-        transform.position = GetPositionAtDistance(travelledDistance);
+        Vector3 newPos = GetPositionAtDistance(travelledDistance);
+        currentVelocity = (newPos - lastPosition) / Time.deltaTime;
+
+        transform.position = newPos;
+        lastPosition = newPos;
     }
+
+    void EnablePhysics()
+    {
+        isMoving = false;
+
+        rb.isKinematic = false;
+        rb.useGravity = true;
+        rb.linearVelocity = currentVelocity;
+    }
+
 
     Vector3 GetPositionAtDistance(float distance)
     {
